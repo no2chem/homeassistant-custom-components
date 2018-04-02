@@ -8,7 +8,9 @@ import homeassistant.helpers.config_validation as cv
 
 from homeassistant.components.climate import (ClimateDevice, PLATFORM_SCHEMA, STATE_IDLE, STATE_HEAT, STATE_COOL, STATE_AUTO,
 SUPPORT_OPERATION_MODE, SUPPORT_TARGET_TEMPERATURE, SUPPORT_FAN_MODE)
-from homeassistant.const import (ATTR_UNIT_OF_MEASUREMENT, ATTR_TEMPERATURE, CONF_NAME, CONF_HOST, CONF_MAC, CONF_TIMEOUT, CONF_CUSTOMIZE)
+from homeassistant.const import (ATTR_UNIT_OF_MEASUREMENT, ATTR_TEMPERATURE, CONF_NAME, CONF_HOST, CONF_MAC, CONF_TIMEOUT, 
+CONF_CUSTOMIZE, TEMP_CELSIUS)
+from homeassistant.util.temperature import convert as convert_temperature
 from homeassistant.helpers.event import (async_track_state_change)
 from homeassistant.core import callback
 from homeassistant.helpers.restore_state import async_get_last_state
@@ -126,7 +128,7 @@ class BroadlinkIRClimate(ClimateDevice):
         self._max_temp = max_temp
         self._target_temperature = target_temp
         self._target_temperature_step = 1
-        self._unit_of_measurement = hass.config.units.temperature_unit
+        self._unit_of_measurement = TEMP_CELSIUS
         
         self._current_temperature = 0
         self._temp_sensor_entity_id = temp_sensor_entity_id
@@ -194,8 +196,7 @@ class BroadlinkIRClimate(ClimateDevice):
         try:
             _state = state.state
             if self.represents_float(_state):
-                self._current_temperature = self.hass.config.units.temperature(
-                    float(_state), unit)
+                self._current_temperature = convert_temperature(float(_state), unit, TEMP_CELSIUS)
         except ValueError as ex:
             _LOGGER.error('Unable to update from sensor: %s', ex)    
 
@@ -306,6 +307,6 @@ class BroadlinkIRClimate(ClimateDevice):
         state = yield from async_get_last_state(self.hass, self.entity_id)
         
         if state is not None:
-            self._target_temperature = state.attributes['temperature']
+            self._target_temperature = convert_temperature(state.attributes['temperature'], self.hass.config.units.temperature_unit, TEMP_CELSIUS) 
             self._current_operation = state.attributes['operation_mode']
             self._current_fan_mode = state.attributes['fan_mode']
